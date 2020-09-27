@@ -23,10 +23,10 @@ const SERVERS: [&str; 5] = [
 ];
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "MDQ Opt", about = "MDQ options.")]
+#[structopt(name = "MDQ: Multi DNS Query", about = "Query a name from multiple DNS servers.")]
 struct Opt {
-    #[structopt(short = "h", long = "host")]
-    host: String,
+    #[structopt(short = "n", long = "name")]
+    name: String,
 }
 
 // via https://github.com/jbaublitz/neli/blob/master/examples/route-list.rs
@@ -89,20 +89,20 @@ fn get_default_gateway() -> Option<IpAddr> {
     return get_default_route(nl);
 }
 
-fn get_rrs(host: &str, server: IpAddr) {
+fn get_rrs(name: &str, server: IpAddr) {
     let server_address = format!("{}:53", server).parse::<SocketAddr>().unwrap();
     let conn = UdpClientConnection::new(server_address).unwrap();
     let client = SyncClient::new(conn);
 
-    let fqdn = if !host.ends_with(".") {
-        format!("{}.", host)
+    let fqdn = if !name.ends_with(".") {
+        format!("{}.", name)
     } else {
-        host.to_string()
+        name.to_string()
     };
 
-    let name = Name::from_str(&fqdn).unwrap();
+    let fqdn_name = Name::from_str(&fqdn).unwrap();
 
-    let response: DnsResponse = client.query(&name, DNSClass::IN, RecordType::A).unwrap();
+    let response: DnsResponse = client.query(&fqdn_name, DNSClass::IN, RecordType::A).unwrap();
 
     let answers: &[Record] = response.answers();
 
@@ -112,10 +112,10 @@ fn get_rrs(host: &str, server: IpAddr) {
     }
 
     for answer in answers {
-        if let &RData::A(ref ip) = answer.rdata() {
-            println!("{}: {}", server, ip)
-        } else {
-            println!("Invalid response from {}", server)
+        if let &RData::A(ref ipv4) = answer.rdata() {
+            println!("{}: IPv4 {}", server, ipv4)
+        } else if let &RData::CNAME(ref canonical) = answer.rdata() {
+            println!("{}: CNAME {}", server, canonical);
         }
     }
 }
@@ -136,9 +136,9 @@ fn main() {
     }
 
     for server in servers {
-        let host = opt.host.clone();
+        let name = opt.name.clone();
         let handle = thread::spawn(move || {
-            get_rrs(&host, server)
+            get_rrs(&name, server)
         });
         handles.push(handle);
     }
