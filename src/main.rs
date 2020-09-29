@@ -104,7 +104,7 @@ fn get_rrs(name: &str, server: IpAddr) {
     let maybe_response = client.query(&fqdn_name, DNSClass::IN, RecordType::A);
 
     if maybe_response.is_err() {
-        println!("{}: Error {}", server, maybe_response.clone().err().unwrap())
+        println!("{}: Error {}", server, maybe_response.clone().err().unwrap());
         return;
     }
 
