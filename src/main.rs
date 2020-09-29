@@ -11,7 +11,6 @@ use neli::socket::NlSocket;
 use structopt::StructOpt;
 use trust_dns_client::client::{Client, SyncClient};
 use trust_dns_client::udp::UdpClientConnection;
-use trust_dns_client::op::DnsResponse;
 use trust_dns_client::rr::{DNSClass, Name, RData, Record, RecordType};
 
 const SERVERS: [&str; 5] = [
@@ -102,12 +101,18 @@ fn get_rrs(name: &str, server: IpAddr) {
 
     let fqdn_name = Name::from_str(&fqdn).unwrap();
 
-    let response: DnsResponse = client.query(&fqdn_name, DNSClass::IN, RecordType::A).unwrap();
+    let maybe_response = client.query(&fqdn_name, DNSClass::IN, RecordType::A);
+
+    if maybe_response.is_err() {
+        println!("{}: Error {}", server, maybe_response.clone().err().unwrap())
+    }
+
+    let response = maybe_response.unwrap();
 
     let answers: &[Record] = response.answers();
 
     if answers.len() == 0 {
-        println!("No response from {}", server);
+        println!("{}: No response", server);
         return
     }
 
