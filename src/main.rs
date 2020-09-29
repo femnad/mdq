@@ -105,6 +105,7 @@ fn get_rrs(name: &str, server: IpAddr) {
 
     if maybe_response.is_err() {
         println!("{}: Error {}", server, maybe_response.clone().err().unwrap())
+        return;
     }
 
     let response = maybe_response.unwrap();
