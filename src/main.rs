@@ -24,7 +24,7 @@ const SERVERS: [&str; 5] = [
 #[derive(Debug, StructOpt)]
 #[structopt(name = "MDQ: Multi DNS Query", about = "Query a name from multiple DNS servers.")]
 struct Opt {
-    #[structopt(short = "n", long = "name")]
+    #[structopt(name = "NAME")]
     name: String,
 }
 
