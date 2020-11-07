@@ -26,6 +26,8 @@ const SERVERS: [&str; 5] = [
 struct Opt {
     #[structopt(name = "NAME")]
     name: String,
+    #[structopt(short = "t", long = "type", default_value = "A")]
+    query_type: String,
 }
 
 // via https://github.com/jbaublitz/neli/blob/master/examples/route-list.rs
@@ -88,7 +90,7 @@ fn get_default_gateway() -> Option<IpAddr> {
     return get_default_route(nl);
 }
 
-fn get_rrs(name: &str, server: IpAddr) {
+fn get_rrs(name: &str, server: IpAddr, record_type: String) {
     let server_address = format!("{}:53", server).parse::<SocketAddr>().unwrap();
     let conn = UdpClientConnection::new(server_address).unwrap();
     let client = SyncClient::new(conn);
@@ -100,8 +102,8 @@ fn get_rrs(name: &str, server: IpAddr) {
     };
 
     let fqdn_name = Name::from_str(&fqdn).unwrap();
-
-    let maybe_response = client.query(&fqdn_name, DNSClass::IN, RecordType::A);
+    let record_type = RecordType::from_str(&record_type).unwrap();
+    let maybe_response = client.query(&fqdn_name, DNSClass::IN, record_type);
 
     if maybe_response.is_err() {
         println!("{}: Error {}", server, maybe_response.clone().err().unwrap());
@@ -122,6 +124,8 @@ fn get_rrs(name: &str, server: IpAddr) {
             println!("{}: IPv4 {}", server, ipv4)
         } else if let &RData::CNAME(ref canonical) = answer.rdata() {
             println!("{}: CNAME {}", server, canonical);
+        } else if let &RData::MX(ref mx) = answer.rdata() {
+            println!("{}: MX {}", server, mx.exchange());
         }
     }
 }
@@ -143,8 +147,9 @@ fn main() {
 
     for server in servers {
         let name = opt.name.clone();
+        let query_type = opt.query_type.clone();
         let handle = thread::spawn(move || {
-            get_rrs(&name, server)
+            get_rrs(&name, server, query_type)
         });
         handles.push(handle);
     }
